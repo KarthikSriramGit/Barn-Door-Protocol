@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![ESP32](https://img.shields.io/badge/ESP32-Ready-red.svg)](https://www.espressif.com/)
 
-*"Sometimes you've gotta know who's coming through the door."*
+* "F.R.I.D.A.Y., do me a favor and activate Barn Door Protocol, will you?"* — Tony Stark 
 
 **Barn Door Protocol** is an open-source ESP32 firmware project for monitoring doors and windows using magnetic reed switches. Get instant Telegram notifications when doors or windows open or close, with support for up to 8 zones, MQTT integration, OTA updates, quiet hours, and away/here modes. Perfect for DIY home security, workshop monitoring, or smart home automation projects.
 
