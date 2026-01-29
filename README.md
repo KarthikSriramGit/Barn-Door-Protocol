@@ -1,58 +1,58 @@
-# Door Monitor
+# Barn Door Protocol
 
-ESP32 firmware for a door and window monitoring system. It watches magnetic reed sensors, sends Telegram alerts on open/close, supports multiple zones, quiet hours, NVS configuration, and optional extras (MQTT, OTA, buzzer, Telegram away/here polling).
+*"Sometimes you've gotta know who's coming through the door."*
+
+ESP32 firmware for door and window monitoring. Magnetic reed sensors, Telegram alerts, multi‑zone coverage, quiet hours, NVS config, and optional MQTT, OTA, buzzer, and “away”/“here” polling. Think of it as a little sentinel for your barn—or apartment, lab, or workshop. No suit required; just an ESP32 and a reed switch.
 
 **Target:** ESP32 (ESP-IDF 5.4.x)  
 **Hardware:** ESP32 CP2012 USB-C 38‑pin core board + magnetic reed (NC) door/window sensors.
 
-This repository contains only the Door Monitor project. App sources, `CMakeLists.txt`, and this README are at the repo root. Build and run from the root directory.
+This repo is the project. Sources, `CMakeLists.txt`, and this README live at the root. Build and run from there.
 
 ---
 
 ## Quick start
 
-1. Set Wi‑Fi and Telegram in `main/src/app_config.c` (or via NVS).
-2. Wire a **NC** reed sensor to **GPIO 4** (sensor closed = contact to GND) and an LED to **GPIO 2**.
-3. Run `idf.py set-target esp32 && idf.py build && idf.py -p COMx flash monitor`.
-4. Open or close the sensor; you get Telegram alerts when in **away** mode.
+1. Drop your Wi‑Fi and Telegram details into `main/src/app_config.c` (or feed them via NVS).
+2. Wire a **NC** reed sensor to **GPIO 4** (closed = contact to GND) and an LED to **GPIO 2**.
+3. `idf.py set-target esp32 && idf.py build && idf.py -p COMx flash monitor`.
+4. Open or close the sensor. When you’re **away**, you get the alert. When you’re **here**, you get state changes. Your call.
 
 ---
 
-## Overview
+## What it does
 
-Door Monitor runs on an ESP32, connects to Wi‑Fi, syncs time via NTP, and polls magnetic reed sensors on configurable GPIOs. When a door or window opens or closes it:
+Barn Door Protocol runs on an ESP32, hits Wi‑Fi, syncs time via NTP, and polls magnetic reed sensors on configurable GPIOs. When something opens or closes:
 
-- Drives a status LED (on = any zone open, off = all closed)
-- Sends Telegram messages to one or more chat IDs (open/closed alerts)
-- Repeats “door open” alerts at a configurable interval while in **away** mode
-
-It supports up to 8 zones, debouncing, quiet hours, and full NVS-based configuration. Optional build-time features add MQTT, OTA, a local buzzer, and Telegram “away”/“here” reply handling.
+- **LED** — On when any zone is open, off when everything’s sealed. Simple.
+- **Telegram** — Alerts to one or more chat IDs. Open/closed, plus optional repeat reminders in **away** mode.
+- **Up to 8 zones** — Label them. Front door, garage, that window you never quite trust. Debouncing, quiet hours, NVS-backed config. Optional extras: MQTT, OTA, buzzer, and Telegram “away”/“here” via getUpdates.
 
 ---
 
 ## Features
 
-- **Multi-zone sensors** — Up to 8 zones, each with its own GPIO and label (e.g. “front door”, “kitchen window”).
-- **Debouncing** — Configurable debounce (default 50 ms) per zone to avoid false triggers.
-- **Telegram notifications** — Open/closed alerts to multiple users, with custom greetings per chat.
-- **Away / here mode** — **Away:** instant open alerts plus repeating reminders. **Here:** only state-change (open/closed) notifications.
-- **Quiet hours** — Time window (e.g. 22:00–07:00) during which alerts are suppressed.
-- **NVS configuration** — Wi‑Fi, Telegram, zones, intervals, and related settings in NVS; defaults when keys are missing.
-- **Watchdog** — Task watchdog to recover from main-loop stalls.
+- **Multi‑zone** — Up to 8 zones, each with its own GPIO and label (e.g. *front door*, *kitchen window*).
+- **Debouncing** — Configurable (default 50 ms) so we don’t cry wolf.
+- **Telegram** — Open/closed alerts to multiple users, custom greetings per chat.
+- **Away / here** — **Away:** instant open alerts + repeating reminders. **Here:** state-change only.
+- **Quiet hours** — Time window (e.g. 22:00–07:00) when we stay quiet.
+- **NVS config** — Wi‑Fi, Telegram, zones, intervals, and the rest in NVS; sensible defaults when keys are missing.
+- **Watchdog** — Task WDT. Loop stalls? We reset. We don’t leave you hanging.
 
-**Optional (Kconfig, off by default):** heartbeat logging, MQTT publish, HTTPS OTA updates, buzzer on alert, Telegram getUpdates polling for “away”/“here” replies.
+**Optional (Kconfig, off by default):** heartbeat logs, MQTT publish, HTTPS OTA, buzzer on alert, Telegram getUpdates for “away”/“here”.
 
 ---
 
 ## FreeRTOS usage
 
-The project runs on **ESP-IDF**, which uses **FreeRTOS** as its RTOS. Door Monitor relies on FreeRTOS for concurrency, timing, and synchronization:
+Runs on **ESP-IDF** over **FreeRTOS**. We use it like we mean it:
 
-- **Tasks** — The main application runs in the default `app_main` task (sensor poll loop, LED updates, notifications). Optionally, **Telegram poll** (Kconfig) spawns a separate task `tg_poll` that periodically calls the Telegram `getUpdates` API to handle “away”/“here” replies. Wi‑Fi, NTP, and HTTP run in ESP-IDF internal tasks.
-- **`vTaskDelay`** — The main loop uses `vTaskDelay(pdMS_TO_TICKS(10))` to yield between poll cycles (~100 Hz), avoiding busy‑wait and keeping the system responsive. The Telegram poll task sleeps for the configured poll interval between requests.
-- **Event groups** — The Wi‑Fi manager uses a FreeRTOS event group to block until the station is connected (or timeout). The connect callback sets a bit; `wifi_mgr_wait_connected()` waits on that bit before continuing init.
-- **Timing** — Millisecond timestamps come from `esp_timer_get_time()` (e.g. alert repeat interval, debounce). The optional **heartbeat** uses a high‑resolution periodic `esp_timer` to log “alive” messages at a fixed interval.
-- **Task watchdog** — The app subscribes the main task to the **task watchdog** (TWDT). The main loop calls `system_wdt_feed()` each iteration. If the loop stalls (e.g. deadlock or infinite loop), the watchdog fires and the system resets, improving robustness.
+- **Tasks** — Main logic in `app_main`. Optional **Telegram poll** spawns `tg_poll` for getUpdates. Wi‑Fi, NTP, HTTP run in IDF tasks.
+- **`vTaskDelay`** — Main loop yields with ~10 ms between polls (~100 Hz). No busy‑wait. Telegram poll task sleeps the configured interval between calls.
+- **Event groups** — Wi‑Fi manager blocks on an event-group bit until we’re connected (or timeout).
+- **Timing** — `esp_timer_get_time()` for alert/debounce timing; optional heartbeat uses a periodic `esp_timer`.
+- **Task watchdog** — Main task on the TWDT. We feed it every loop. Stall = reset. Keeps things honest.
 
 ---
 
@@ -62,42 +62,39 @@ The project runs on **ESP-IDF**, which uses **FreeRTOS** as its RTOS. Door Monit
 
 **ESP32 CP2012 USB-C core board** (38 pins):
 
-- 38-pin layout, narrower width, breadboard-friendly.
-- Integrated antenna, RF balun, power amplifiers, LNAs, filters, and power management.
-- Interfaces: UART, SPI, I2C, PWM, DAC, ADC.
-- 2.4 GHz Wi‑Fi + Bluetooth dual-mode; STA / AP / STA+AP; standard AT commands.
+- 38‑pin, narrow, breadboard‑friendly.
+- Antenna, RF balun, LNAs, filters, power management—all onboard.
+- UART, SPI, I2C, PWM, DAC, ADC. 2.4 GHz Wi‑Fi + BT; STA / AP / STA+AP.
 
-USB is via **CP2012** (Type‑C). Use this board’s USB port for flashing and serial monitor.
+USB via **CP2012** (Type‑C). Use it for flash and serial.
 
 ### Magnetic reed switch (sensors)
 
-**Magnetic reed switch — normally open (NO) / normally closed (NC) — door/window alarm:**
+**NC/NO magnetic reed — door/window alarm style:**
 
-- Sold as door/window security sensors, magnetic contact switches, reed switches for alarms, GPS, etc.
-- Often rated for DC 5 V / 12 V / 24 V; we use them only as dry contacts (no external voltage on the contact).
+- Dry contacts only. We use them as switches, not power sources.
 
-**Use NC (normally closed) types.** When the magnet is near the reed, the contact is closed; when the door/window opens and the magnet moves away, the contact opens.
+**Use NC (normally closed).** Magnet near → closed. Door opens, magnet away → open.
 
 **Wiring:**
 
-- One side of the reed contact → **GND**.
-- Other side → **GPIO** (e.g. GPIO 4 for zone 0).
-- GPIO has internal pull-up. **Door closed** (magnet near): contact closed, GPIO pulled to GND → **low**. **Door open**: contact open, GPIO high → **high.**
+- One contact side → **GND**. Other → **GPIO** (e.g. 4 for zone 0).
+- GPIO pull‑up. **Closed:** contact shorts to GND → **low**. **Open:** contact open → **high.**
 
 ### Other
 
-- **LED** — Status indicator: on when any zone is open, off when all closed. Use a series resistor; default GPIO **2** (often the on-board LED).
-- **Buzzer** (optional) — If enabled via Kconfig, connect a buzzer to the configured GPIO (default **15**). Driven when the door is open in away mode (and not in quiet hours).
+- **LED** — Status: on if any zone open, off when all closed. Default **GPIO 2** (often onboard). Use a series resistor if external.
+- **Buzzer** (optional) — Kconfig‑enable, wire to default **GPIO 15**. Fires when door’s open in away mode (respects quiet hours).
 
 ### Default GPIOs
 
-| Function        | GPIO | Notes                          |
-|----------------|------|---------------------------------|
-| Zone 0 (sensor)| 4    | Default first zone              |
-| Status LED     | 2    | On-board LED on many boards     |
-| Buzzer         | 15   | Only when buzzer enabled (Kconfig) |
+| Function       | GPIO | Notes |
+|----------------|------|-------|
+| Zone 0 (sensor)| 4    | First zone |
+| Status LED     | 2    | Onboard on many boards |
+| Buzzer         | 15   | Kconfig only |
 
-Extra zones use GPIOs set in NVS. Avoid strapping pins (e.g. 0, 2, 12, 15) for critical logic if your board uses them at boot.
+Extra zones via NVS. Avoid strapping pins (0, 2, 12, 15, etc.) if your board uses them at boot.
 
 ---
 
@@ -109,7 +106,7 @@ Extra zones use GPIOs set in NVS. Avoid strapping pins (e.g. 0, 2, 12, 15) for c
 ├── sdkconfig
 ├── main/
 │   ├── CMakeLists.txt
-│   ├── Kconfig              # Door Monitor menu (optional features)
+│   ├── Kconfig              # Barn Door Protocol menu (optional features)
 │   ├── include/
 │   │   ├── app_config.h
 │   │   ├── app_scheduler.h
@@ -121,7 +118,7 @@ Extra zones use GPIOs set in NVS. Avoid strapping pins (e.g. 0, 2, 12, 15) for c
 │       └── app_state.c      # Away mode, last states
 ├── components/
 │   ├── hal/                 # GPIO, sensor, LED, buzzer
-│   ├── sensor/              # Multi-zone + debounce
+│   ├── sensor/              # Multi‑zone + debounce
 │   ├── wifi_mgr/            # Wi‑Fi STA + NTP
 │   ├── notify/              # Telegram, optional MQTT + Telegram poll
 │   └── system/              # WDT, heartbeat, OTA
@@ -134,7 +131,7 @@ Extra zones use GPIOs set in NVS. Avoid strapping pins (e.g. 0, 2, 12, 15) for c
 
 ### NVS (runtime)
 
-Config lives in NVS namespace `door_monitor`. Missing keys fall back to defaults.
+Namespace `door_monitor`. Missing keys → defaults.
 
 | Key pattern        | Description |
 |--------------------|-------------|
@@ -148,20 +145,20 @@ Config lives in NVS namespace `door_monitor`. Missing keys fall back to defaults
 | `zone_N_gpio`      | GPIO for zone N |
 | `zone_N_label`     | Label for zone N |
 | `debounce_ms`      | Debounce (ms) |
-| `alert_interval_ms`| Repeat-alert interval when open in away mode (ms) |
+| `alert_interval_ms`| Repeat‑alert interval when open in away mode (ms) |
 | `led_gpio`         | Status LED GPIO |
 | `away_mode`        | 1 = away, 0 = here |
 | `quiet_en`         | 1 = quiet hours on |
-| `quiet_start`      | Quiet hours start (0–23) |
-| `quiet_end`        | Quiet hours end (0–23) |
+| `quiet_start`      | Quiet start (0–23) |
+| `quiet_end`        | Quiet end (0–23) |
 | `mqtt_uri`         | MQTT broker URI (if MQTT enabled) |
 | `mqtt_topic`       | MQTT topic (if MQTT enabled) |
 
-Use `app_config_load()` / `app_config_save()` (or your own config UI) to read/write these.
+Use `app_config_load()` / `app_config_save()` (or your own config layer) to read/write.
 
-### Build-time (Kconfig)
+### Build‑time (Kconfig)
 
-Run `idf.py menuconfig`, open **Door Monitor**. You can enable:
+`idf.py menuconfig` → **Door Monitor** (the protocol menu). Enable:
 
 - Heartbeat and interval  
 - MQTT  
@@ -169,16 +166,12 @@ Run `idf.py menuconfig`, open **Door Monitor**. You can enable:
 - Buzzer and buzzer GPIO  
 - Telegram poll and poll interval  
 
-### Defaults (when NVS unused)
+### Defaults (no NVS)
 
-- **Wi‑Fi:** SSID `Ace & King of Hearts`, password `PASSWORD` (change before use).
-- **Telegram:** Token `TELEGRAM_TOKEN`, two chats `9999999999`, greetings “Hello Mr Stark” / “Hello Mrs Suseendran”.
-- **Zones:** 1 zone, GPIO 4, label “door”.
-- **LED:** GPIO 2.
-- **Debounce:** 50 ms.
-- **Alert interval:** 60 000 ms.
-- **Away mode:** on.
-- **Quiet hours:** off.
+- **Wi‑Fi:** SSID `Ace & King of Hearts`, password `PASSWORD` — change before deploy.
+- **Telegram:** Token `TELEGRAM_TOKEN`, two chats `9999999999`, greetings *"Hello Mr Stark"* / *"Hello Mrs Suseendran"*.
+- **Zones:** 1 zone, GPIO 4, label `"door"`.
+- **LED:** GPIO 2. **Debounce:** 50 ms. **Alert interval:** 60 000 ms. **Away:** on. **Quiet hours:** off.
 
 ---
 
@@ -186,8 +179,8 @@ Run `idf.py menuconfig`, open **Door Monitor**. You can enable:
 
 ### Requirements
 
-- ESP-IDF **v5.4.x**
-- ESP-IDF environment active (e.g. ESP-IDF 5.4 CMD or PowerShell; `idf.py` and `cmake` on `PATH`).
+- **ESP‑IDF v5.4.x**
+- IDF environment active (`idf.py`, `cmake` on `PATH`). ESP‑IDF 5.4 CMD or PowerShell.
 
 ### Build
 
@@ -196,7 +189,7 @@ idf.py set-target esp32
 idf.py build
 ```
 
-Run from the **repo root** (project root).
+From the **repo root**.
 
 ### Flash and monitor
 
@@ -204,50 +197,49 @@ Run from the **repo root** (project root).
 idf.py -p COMx flash monitor
 ```
 
-Use your board’s port (e.g. `COM3` on Windows, `/dev/ttyUSB0` on Linux). The CP2012 USB-C port is used for serial.
+Use your port (`COM3`, `/dev/ttyUSB0`, etc.). CP2012 USB‑C for serial.
 
 ### OTA (optional)
 
-1. In menuconfig: **Partition Table** → **Factory app, two OTA definitions**.
-2. **Door Monitor** → **Enable OTA updates**, set **OTA firmware URL** (HTTPS to your `.bin`).
-3. Rebuild. On boot, the app checks the URL and updates if possible, then restarts.
+1. **Partition table** → *Factory app, two OTA definitions*.
+2. **Door Monitor** → *Enable OTA updates*, set **OTA firmware URL** (HTTPS to your `.bin`).
+3. Rebuild. On boot we check the URL, update if we can, then restart.
 
 ---
 
-## First-time setup
+## First‑time setup
 
 1. **Build and flash** as above.
-2. **Configure Wi‑Fi and Telegram** (edit defaults in `app_config.c` or use NVS):  
-   - `wifi_ssid`, `wifi_pass`  
-   - `tg_token`  
-   - At least one `tg_chat_*` and `tg_greet_*`
-3. **Telegram:** Create a bot with [@BotFather](https://t.me/BotFather), get the token, add the bot to your chat(s), use the chat ID(s) in config.
-4. **Wiring:** NC reed sensor(s) and LED as in **Hardware** (and optional buzzer if enabled).
-5. Power up. The device connects to Wi‑Fi, syncs NTP, and monitors. Open/close a sensor to trigger alerts.
+2. **Configure Wi‑Fi and Telegram** (`app_config.c` defaults or NVS): `wifi_ssid`, `wifi_pass`, `tg_token`, at least one `tg_chat_*` and `tg_greet_*`.
+3. **Telegram:** [@BotFather](https://t.me/BotFather) → create bot, token, add to chat(s), plug in chat ID(s).
+4. **Wiring:** NC reed(s) + LED (and optional buzzer) per **Hardware**.
+5. Power up. We connect, sync NTP, and watch. Open/close a sensor → alerts.
 
 ---
 
 ## Optional features (Kconfig)
 
-- **Heartbeat** — Periodic “alive” log messages.
-- **MQTT** — Publish `open` / `closed` to a topic; set `mqtt_uri` and `mqtt_topic` in NVS.
-- **OTA** — Boot-time HTTPS OTA when URL is set; use two-OTA partition table.
-- **Buzzer** — Drive buzzer GPIO when door open in away mode (and not in quiet hours).
-- **Telegram “away” / “here”** — Poll `getUpdates`, parse “away”/“here” replies, update away mode.
+- **Heartbeat** — Periodic “alive” logs.
+- **MQTT** — Publish `open` / `closed` to a topic; `mqtt_uri` and `mqtt_topic` in NVS.
+- **OTA** — Boot‑time HTTPS OTA when URL is set; use two‑OTA partition table.
+- **Buzzer** — Drive buzzer GPIO when door’s open in away mode (quiet hours respected).
+- **Telegram “away” / “here”** — Poll getUpdates, parse “away”/“here”, update mode.
 
 ---
 
 ## GPIO summary
 
-| Signal   | Default GPIO | Configurable via        |
-|----------|--------------|--------------------------|
-| Zone 0   | 4            | NVS `zone_0_gpio`        |
-| Zones 1–7| —            | NVS `zone_N_gpio`        |
-| LED      | 2            | NVS `led_gpio`           |
-| Buzzer   | 15           | Kconfig `DOOR_MONITOR_BUZZER_GPIO` |
+| Signal    | Default | Configurable via |
+|-----------|---------|-------------------|
+| Zone 0    | 4       | NVS `zone_0_gpio` |
+| Zones 1–7 | —       | NVS `zone_N_gpio` |
+| LED       | 2       | NVS `led_gpio` |
+| Buzzer    | 15      | Kconfig `DOOR_MONITOR_BUZZER_GPIO` |
 
 ---
 
 ## License
 
-Use and modify as you like. Comply with Telegram, MQTT, OTA, etc. terms where applicable.
+Use and modify as you like. Stay compliant with Telegram, MQTT, OTA, etc. where it applies.
+
+*Barn Door Protocol.* Your doors. Your rules.
