@@ -1,13 +1,42 @@
 # Barn Door Protocol
 
+[![ESP-IDF](https://img.shields.io/badge/ESP--IDF-5.5.x-blue.svg)](https://docs.espressif.com/projects/esp-idf/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![ESP32](https://img.shields.io/badge/ESP32-Ready-red.svg)](https://www.espressif.com/)
+
 *"Sometimes you've gotta know who's coming through the door."*
 
-ESP32 firmware for door and window monitoring. Magnetic reed sensors, Telegram alerts, multi‑zone coverage, quiet hours, NVS config, and optional MQTT, OTA, buzzer, and “away”/“here” polling. Think of it as a little sentinel for your barn—or apartment, lab, or workshop. No suit required; just an ESP32 and a reed switch.
+**Barn Door Protocol** is an open-source ESP32 firmware project for monitoring doors and windows using magnetic reed switches. Get instant Telegram notifications when doors or windows open or close, with support for up to 8 zones, MQTT integration, OTA updates, quiet hours, and away/here modes. Perfect for DIY home security, workshop monitoring, or smart home automation projects.
 
 **Target:** ESP32 (ESP-IDF 5.5.x)  
 **Hardware:** ESP32 CP2012 USB-C 38‑pin core board + magnetic reed (NC) door/window sensors.
 
 This repo is the project. Sources, `CMakeLists.txt`, and this README live at the root. Build and run from there.
+
+---
+
+## Use Cases
+
+- 🏠 **Home Security** - Monitor front doors, back doors, and windows
+- 🏭 **Workshop/Garage** - Know when someone enters your workspace
+- 🏢 **Office/Lab** - Monitor sensitive areas
+- 🚪 **Apartment** - Track door activity
+- 🏡 **Smart Home** - Integrate with Home Assistant via MQTT
+- 🔔 **Remote Monitoring** - Get alerts when away from home
+
+---
+
+## Why Barn Door Protocol?
+
+- ✅ **Multi-zone support** - Monitor up to 8 doors/windows simultaneously
+- ✅ **Telegram integration** - Get instant alerts on your phone
+- ✅ **MQTT support** - Integrate with Home Assistant, Node-RED, and other home automation platforms
+- ✅ **OTA updates** - Update firmware wirelessly without physical access
+- ✅ **Quiet hours** - Don't get woken up at night
+- ✅ **Away/Here modes** - Different alert behavior when home vs away
+- ✅ **Open source** - Full control, no vendor lock-in
+- ✅ **Well documented** - Easy to understand and modify
+- ✅ **Production ready** - Watchdog timers, error handling, and robust FreeRTOS implementation
 
 ---
 
@@ -238,8 +267,18 @@ Use your port (`COM3`, `/dev/ttyUSB0`, etc.). CP2012 USB‑C for serial.
 
 ---
 
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for more details.
+
+## Code of Conduct
+
+This project adheres to a Code of Conduct that all contributors are expected to follow. Please read [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before contributing.
+
 ## License
 
-Use and modify as you like. Stay compliant with Telegram, MQTT, OTA, etc. where it applies.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 *Barn Door Protocol.* Your doors. Your rules.
