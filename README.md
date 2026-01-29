@@ -44,6 +44,18 @@ It supports up to 8 zones, debouncing, quiet hours, and full NVS-based configura
 
 ---
 
+## FreeRTOS usage
+
+The project runs on **ESP-IDF**, which uses **FreeRTOS** as its RTOS. Door Monitor relies on FreeRTOS for concurrency, timing, and synchronization:
+
+- **Tasks** — The main application runs in the default `app_main` task (sensor poll loop, LED updates, notifications). Optionally, **Telegram poll** (Kconfig) spawns a separate task `tg_poll` that periodically calls the Telegram `getUpdates` API to handle “away”/“here” replies. Wi‑Fi, NTP, and HTTP run in ESP-IDF internal tasks.
+- **`vTaskDelay`** — The main loop uses `vTaskDelay(pdMS_TO_TICKS(10))` to yield between poll cycles (~100 Hz), avoiding busy‑wait and keeping the system responsive. The Telegram poll task sleeps for the configured poll interval between requests.
+- **Event groups** — The Wi‑Fi manager uses a FreeRTOS event group to block until the station is connected (or timeout). The connect callback sets a bit; `wifi_mgr_wait_connected()` waits on that bit before continuing init.
+- **Timing** — Millisecond timestamps come from `esp_timer_get_time()` (e.g. alert repeat interval, debounce). The optional **heartbeat** uses a high‑resolution periodic `esp_timer` to log “alive” messages at a fixed interval.
+- **Task watchdog** — The app subscribes the main task to the **task watchdog** (TWDT). The main loop calls `system_wdt_feed()` each iteration. If the loop stalls (e.g. deadlock or infinite loop), the watchdog fires and the system resets, improving robustness.
+
+---
+
 ## Hardware
 
 ### ESP32 board
