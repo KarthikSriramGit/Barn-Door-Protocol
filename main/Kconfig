@@ -1,0 +1,61 @@
+menu "Door Monitor"
+
+config DOOR_MONITOR_HEARTBEAT
+    bool "Enable heartbeat logging"
+    default n
+    help
+        Log a periodic heartbeat message.
+
+config DOOR_MONITOR_HEARTBEAT_MS
+    int "Heartbeat interval (ms)"
+    default 60000
+    depends on DOOR_MONITOR_HEARTBEAT
+    help
+        Interval between heartbeat logs.
+
+config DOOR_MONITOR_MQTT
+    bool "Enable MQTT notifications"
+    default n
+    help
+        Publish door state to MQTT broker.
+
+config DOOR_MONITOR_OTA
+    bool "Enable OTA updates"
+    default n
+    help
+        Support OTA firmware updates over HTTP(S). Use two-OTA partition table.
+
+config DOOR_MONITOR_OTA_URL
+    string "OTA firmware URL"
+    default ""
+    depends on DOOR_MONITOR_OTA
+    help
+        HTTPS URL of firmware binary for OTA.
+
+config DOOR_MONITOR_BUZZER
+    bool "Enable buzzer on alert"
+    default n
+    help
+        Drive a buzzer GPIO when door open in away mode.
+
+config DOOR_MONITOR_BUZZER_GPIO
+    int "Buzzer GPIO number"
+    default 15
+    depends on DOOR_MONITOR_BUZZER
+    help
+        GPIO connected to buzzer (active high).
+
+config DOOR_MONITOR_TELEGRAM_POLL
+    bool "Poll Telegram for away/here replies"
+    default n
+    help
+        Poll getUpdates and set away/here from user replies.
+
+config DOOR_MONITOR_TELEGRAM_POLL_MS
+    int "Telegram poll interval (ms)"
+    default 10000
+    depends on DOOR_MONITOR_TELEGRAM_POLL
+    help
+        Interval between getUpdates calls.
+
+endmenu
