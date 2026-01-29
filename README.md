@@ -4,7 +4,7 @@
 
 ESP32 firmware for door and window monitoring. Magnetic reed sensors, Telegram alerts, multi‑zone coverage, quiet hours, NVS config, and optional MQTT, OTA, buzzer, and “away”/“here” polling. Think of it as a little sentinel for your barn—or apartment, lab, or workshop. No suit required; just an ESP32 and a reed switch.
 
-**Target:** ESP32 (ESP-IDF 5.4.x)  
+**Target:** ESP32 (ESP-IDF 5.5.x)  
 **Hardware:** ESP32 CP2012 USB-C 38‑pin core board + magnetic reed (NC) door/window sensors.
 
 This repo is the project. Sources, `CMakeLists.txt`, and this README live at the root. Build and run from there.
@@ -179,8 +179,8 @@ Use `app_config_load()` / `app_config_save()` (or your own config layer) to read
 
 ### Requirements
 
-- **ESP‑IDF v5.4.x**
-- IDF environment active (`idf.py`, `cmake` on `PATH`). ESP‑IDF 5.4 CMD or PowerShell.
+- **ESP‑IDF v5.5.x**
+- IDF environment active (`idf.py`, `cmake` on `PATH`). ESP‑IDF 5.5 CMD or PowerShell.
 
 ### Build
 
